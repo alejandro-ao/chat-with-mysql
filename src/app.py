@@ -4,37 +4,40 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.prompts import ChatPromptTemplate
 from dotenv import load_dotenv
 
 def initialize_database(host, port, username, password, database):
   db_uri = f"mysql+mysqlconnector://{username}:{password}@{host}:{port}/{database}"
   return SQLDatabase.from_uri(db_uri)
 
+def get_sql_chain(db):
+    template = """
+    Based on the table schema below, write a SQL query that would answer the user's question.
+    {schema}
+
+    Question: {question}
+    SQL Query:
+    """
+
+    prompt = ChatPromptTemplate.from_template(template)
+    
+    llm = ChatOpenAI()
+    
+    def get_schema(_):
+      return db.get_table_info()
+
+    return (
+        RunnablePassthrough.assign(schema=get_schema)
+        | prompt
+        | llm.bind(stop="\nSQL Result:")
+        | StrOutputParser()
+    )
+  
+
 def get_response(user_query, chat_history, db):
 
-  from langchain_core.prompts import ChatPromptTemplate
-
-  template = """
-  Based on the table schema below, write a SQL query that would answer the user's question.
-  {schema}
-
-  Question: {question}
-  SQL Query:
-  """
-
-  prompt = ChatPromptTemplate.from_template(template)
-  
-  llm = ChatOpenAI()
-  
-  def get_schema(_):
-    return db.get_table_info()
-
-  sql_chain = (
-      RunnablePassthrough.assign(schema=get_schema)
-      | prompt
-      | llm.bind(stop="\nSQL Result:")
-      | StrOutputParser()
-  )
+  sql_chain = get_sql_chain(db)
   
   return sql_chain.invoke({
     "question": user_query
