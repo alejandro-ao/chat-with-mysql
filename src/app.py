@@ -34,12 +34,36 @@ def get_sql_chain(db):
         | StrOutputParser()
     )
   
-
 def get_response(user_query, chat_history, db):
 
   sql_chain = get_sql_chain(db)
   
-  return sql_chain.invoke({
+  template = """
+  Based on the table schema below, question, sql query, and sql response, write a natural language response:
+  {schema}
+
+  Question: {question}
+  SQL Query: {query}
+  SQL Response: {response}"""
+
+  prompt = ChatPromptTemplate.from_template(template)
+  
+  llm = ChatOpenAI()
+  
+  def get_schema(_):
+    return db.get_table_info()
+  
+  chain = (
+    RunnablePassthrough.assign(query=sql_chain).assign(
+    schema=get_schema,
+    response= lambda vars: db.run(vars["query"])
+  )
+  | prompt
+  | llm
+  | StrOutputParser()
+  )
+  
+  return chain.invoke({
     "question": user_query
   })
   
