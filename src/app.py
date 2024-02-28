@@ -42,6 +42,7 @@ def get_response(user_query, chat_history, db):
   Based on the table schema below, question, sql query, and sql response, write a natural language response:
   {schema}
 
+  Conversation History: {chat_history}
   Question: {question}
   SQL Query: {query}
   SQL Response: {response}"""
@@ -64,7 +65,8 @@ def get_response(user_query, chat_history, db):
   )
   
   return chain.stream({
-    "question": user_query
+    "question": user_query,
+    "chat_history": chat_history,
   })
   
 load_dotenv()
@@ -73,7 +75,7 @@ st.set_page_config(initial_sidebar_state="expanded", page_title="Chat with a MyS
 
 if 'chat_history' not in st.session_state:
   st.session_state.chat_history = [
-    AIMessage(content="")
+    AIMessage(content="Hello! I'm a chatbot that can help you with your SQL queries. Ask me anything about your database!")
   ]
   
 if 'db' not in st.session_state:
@@ -102,6 +104,16 @@ with st.sidebar:
             st.success("Connected to the database!")
     
 user_query = st.chat_input("Type a message...")
+
+# conversation
+for message in st.session_state.chat_history:
+    if isinstance(message, AIMessage):
+        with st.chat_message("AI"):
+            st.write(message.content)
+    elif isinstance(message, HumanMessage):
+        with st.chat_message("Human"):
+            st.write(message.content)
+
 
 if user_query is not None and user_query != "":
     st.session_state.chat_history.append(HumanMessage(content=user_query))
