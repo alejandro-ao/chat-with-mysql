@@ -4,3 +4,5 @@ langchain-community==0.0.21
 langchain-core==0.1.24
 langchain-openai==0.0.6
 mysql-connector-python==8.3.0
+groq==0.4.2
+langchain-groq==0.0.1

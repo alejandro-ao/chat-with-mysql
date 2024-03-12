@@ -3,6 +3,7 @@ from langchain_community.utilities import SQLDatabase
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from langchain_openai import ChatOpenAI
+from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.prompts import ChatPromptTemplate
 from dotenv import load_dotenv
@@ -16,6 +17,11 @@ def get_sql_chain(db):
     Based on the table schema below, write a SQL query that would answer the user's question.
     {schema}
 
+    Write only the SQL query and nothing else. For example:
+    Question: which 3 artists have the most tracks?
+    SQL Query: SELECT ArtistId, COUNT(*) as track_count FROM Track GROUP BY ArtistId ORDER BY track_count DESC LIMIT 3;
+    Question: Name 10 artists
+    SQL Query: SELECT Name FROM Artist LIMIT 10;
     Question: {question}
     SQL Query:
     """
@@ -23,6 +29,7 @@ def get_sql_chain(db):
     prompt = ChatPromptTemplate.from_template(template)
     
     llm = ChatOpenAI()
+    # llm = ChatGroq(temperature=0, model_name="mixtral-8x7b-32768")
     
     def get_schema(_):
       return db.get_table_info()
@@ -49,6 +56,7 @@ def get_response(user_query, chat_history, db):
 
   prompt = ChatPromptTemplate.from_template(template)
   
+  # llm = ChatGroq(temperature=0, model_name="mixtral-8x7b-32768")
   llm = ChatOpenAI()
   
   def get_schema(_):
@@ -85,11 +93,11 @@ with st.sidebar:
     st.title("Chat with a MySQL Database")
     st.write("This is a simple chat application allows you to chat with a MySQL database.")
 
-    st.text_input("Host", key="name")
-    st.text_input("Port", key="port")
-    st.text_input("Username", key="username")
-    st.text_input("Password", key="password")
-    st.text_input("Database", key="database")
+    st.text_input("Host", key="name", value="localhost")
+    st.text_input("Port", key="port", value="3306")
+    st.text_input("Username", key="username", value="root")
+    st.text_input("Password", key="password", type="password", value="admin")
+    st.text_input("Database", key="database", value="Chinook")
     
     if st.button("Connect"):
         with st.spinner("Connecting to the database..."):
